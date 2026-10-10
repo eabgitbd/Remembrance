@@ -11,12 +11,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-fun Modifier.glassmorphic(
-    cornerRadius: Dp = 20.dp,
-    backgroundColor: Color = GlassSurfaceDark.copy(alpha = 0.65f),
-    borderColor: Color = GlassBorderDark,
+fun Modifier.premiumGlassmorphic(
+    cornerRadius: Dp = 22.dp,
+    backgroundColor: Color = SurfaceGlassDark.copy(alpha = 0.75f),
+    borderColor: Color = SurfaceGlassBorder,
     borderWidth: Dp = 1.dp,
-    elevation: Dp = 8.dp
+    elevation: Dp = 6.dp
 ): Modifier {
     val shape = RoundedCornerShape(cornerRadius)
     return this
@@ -25,8 +25,8 @@ fun Modifier.glassmorphic(
         .background(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    backgroundColor.copy(alpha = 0.80f),
-                    backgroundColor.copy(alpha = 0.55f)
+                    backgroundColor.copy(alpha = 0.85f),
+                    backgroundColor.copy(alpha = 0.65f)
                 )
             )
         )
@@ -34,8 +34,8 @@ fun Modifier.glassmorphic(
             width = borderWidth,
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    borderColor.copy(alpha = 0.40f),
-                    borderColor.copy(alpha = 0.10f)
+                    SurfaceGlassHighlight,
+                    borderColor.copy(alpha = 0.12f)
                 )
             ),
             shape = shape
@@ -44,7 +44,7 @@ fun Modifier.glassmorphic(
 
 fun Modifier.squircleOverlay(
     cornerRadius: Dp = 24.dp,
-    backgroundColor: Color = LimeGreenOverlay,
+    backgroundColor: Color = LimeOverlayDefault,
     borderColor: Color = PureBlack,
     borderWidth: Dp = 1.dp
 ): Modifier {

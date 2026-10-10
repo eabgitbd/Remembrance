@@ -6,15 +6,17 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 class CollisionFreeScheduler(
     private val scope: CoroutineScope,
     private val bufferBetweenRemindersMs: Long = 2000L
 ) {
 
-    private val _displayEvents = MutableSharedFlow<ReminderDisplayEvent>(extraBufferCapacity = 16)
+    private val _displayEvents = MutableSharedFlow<ReminderDisplayEvent>(extraBufferCapacity = 32)
     val displayEvents: SharedFlow<ReminderDisplayEvent> = _displayEvents.asSharedFlow()
 
+    private val currentReminders = CopyOnWriteArrayList<ReminderItem>()
     private val nextScheduledTimeMap = ConcurrentHashMap<Long, Long>()
     private var schedulerJob: Job? = null
 
@@ -28,65 +30,90 @@ class CollisionFreeScheduler(
         stop()
         if (reminders.isEmpty()) return
 
+        currentReminders.clear()
+        currentReminders.addAll(reminders.filter { it.isEnabled && it.text.isNotBlank() })
+
         val now = System.currentTimeMillis()
-        reminders.filter { it.isEnabled }.forEachIndexed { index, reminder ->
-            // Stagger initial start times to avoid instant simultaneous collision on service launch
-            val initialOffsetMs = (index * (reminder.durationSeconds * 1000L + bufferBetweenRemindersMs))
-            val intervalMs = reminder.frequencyMinutes * 60 * 1000L
-            nextScheduledTimeMap[reminder.id] = now + initialOffsetMs + 1000L
+        currentReminders.forEachIndexed { index, reminder ->
+            // Initial staggered trigger: first reminder after 2s, subsequent after short offsets
+            val initialOffsetMs = 2000L + (index * (reminder.durationSeconds * 1000L + bufferBetweenRemindersMs))
+            nextScheduledTimeMap[reminder.id] = now + initialOffsetMs
         }
 
         schedulerJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
-                checkAndDispatchReminders(reminders)
-                delay(1000L) // 1-second evaluation tick
+                checkAndDispatchReminders()
+                delay(1000L) // 1-second check interval
             }
         }
+    }
+
+    fun updateReminders(reminders: List<ReminderItem>) {
+        val filtered = reminders.filter { it.isEnabled && it.text.isNotBlank() }
+        currentReminders.clear()
+        currentReminders.addAll(filtered)
+
+        val now = System.currentTimeMillis()
+        // Ensure every active reminder has a schedule entry
+        filtered.forEachIndexed { index, reminder ->
+            if (!nextScheduledTimeMap.containsKey(reminder.id)) {
+                val offset = 2000L + (index * 3000L)
+                nextScheduledTimeMap[reminder.id] = now + offset
+            }
+        }
+        // Remove deleted reminders
+        val activeIds = filtered.map { it.id }.toSet()
+        nextScheduledTimeMap.keys.retainAll(activeIds)
     }
 
     fun stop() {
         schedulerJob?.cancel()
         schedulerJob = null
+        currentReminders.clear()
         nextScheduledTimeMap.clear()
         isOverlayCurrentlyActive = false
         activeOverlayEndsAtMs = 0L
     }
 
-    private suspend fun checkAndDispatchReminders(reminders: List<ReminderItem>) {
+    private suspend fun checkAndDispatchReminders() {
         val now = System.currentTimeMillis()
 
-        // If an overlay is currently showing, wait until it finishes
-        if (isOverlayCurrentlyActive && now < activeOverlayEndsAtMs) {
+        // Failsafe auto-reset: if previous overlay window timed out, clear lock
+        if (isOverlayCurrentlyActive && now >= activeOverlayEndsAtMs) {
+            isOverlayCurrentlyActive = false
+        }
+
+        // If an overlay is legitimately currently active on screen, wait for it to finish
+        if (isOverlayCurrentlyActive) {
             return
         }
 
         // Find due reminders
-        val dueReminders = reminders.filter { reminder ->
-            reminder.isEnabled && (nextScheduledTimeMap[reminder.id]?.let { it <= now } ?: false)
+        val dueReminders = currentReminders.filter { reminder ->
+            val scheduled = nextScheduledTimeMap[reminder.id]
+            scheduled != null && scheduled <= now
         }
 
         if (dueReminders.isEmpty()) return
 
-        // Pick the most overdue reminder
+        // Pick the oldest due reminder
         val selectedReminder = dueReminders.minByOrNull { nextScheduledTimeMap[it.id] ?: Long.MAX_VALUE }
             ?: return
 
-        // Calculate duration and end time
         val durationMs = selectedReminder.durationSeconds * 1000L
         isOverlayCurrentlyActive = true
         activeOverlayEndsAtMs = now + durationMs + bufferBetweenRemindersMs
 
-        // Schedule its next repetition
-        val intervalMs = selectedReminder.frequencyMinutes * 60 * 1000L
+        // Schedule next occurrence based on frequency in minutes
+        val intervalMs = (selectedReminder.frequencyMinutes * 60 * 1000L).coerceAtLeast(10_000L)
         nextScheduledTimeMap[selectedReminder.id] = activeOverlayEndsAtMs + intervalMs
 
-        // If any other due reminders collided, reschedule their trigger time to after this one ends
+        // If other reminders were also due, stagger them so they do NOT collide
         dueReminders.filter { it.id != selectedReminder.id }.forEachIndexed { idx, other ->
-            val staggeredTime = activeOverlayEndsAtMs + (idx * bufferBetweenRemindersMs)
-            nextScheduledTimeMap[other.id] = staggeredTime
+            nextScheduledTimeMap[other.id] = activeOverlayEndsAtMs + ((idx + 1) * bufferBetweenRemindersMs)
         }
 
-        // Dispatch display event
+        // Emit display event
         _displayEvents.emit(
             ReminderDisplayEvent(
                 reminder = selectedReminder,
@@ -94,9 +121,9 @@ class CollisionFreeScheduler(
             )
         )
 
-        // Reset overlay active state after duration + buffer completes
+        // Safety timeout coroutine: forcibly release lock after duration + buffer
         scope.launch {
-            delay(durationMs + bufferBetweenRemindersMs)
+            delay(durationMs + bufferBetweenRemindersMs + 500L)
             if (System.currentTimeMillis() >= activeOverlayEndsAtMs) {
                 isOverlayCurrentlyActive = false
             }

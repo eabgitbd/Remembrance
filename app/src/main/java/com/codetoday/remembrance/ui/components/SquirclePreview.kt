@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,19 +34,20 @@ fun SquirclePreview(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
+                .shadow(8.dp, shape, clip = false)
                 .clip(shape)
                 .background(backgroundColor)
                 .border(reminder.borderWidthDp.dp, borderColor, shape)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 22.dp, vertical = 14.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = if (reminder.text.isBlank()) "Preview Text / প্রিভিউ / معاينة" else reminder.text,
+                text = if (reminder.text.isBlank()) "سُبْحَانَ اللَّهِ • সুবহানাল্লাহ • Peace" else reminder.text,
                 fontFamily = fontFamily,
                 fontSize = reminder.fontSizeSp.sp,
                 color = textColor,

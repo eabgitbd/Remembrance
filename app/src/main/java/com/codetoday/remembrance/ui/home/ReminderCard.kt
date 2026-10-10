@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codetoday.remembrance.data.model.OverlayPosition
 import com.codetoday.remembrance.data.model.ReminderItem
-import com.codetoday.remembrance.data.model.SupportedLanguage
+import com.codetoday.remembrance.domain.localization.AppStrings
 import com.codetoday.remembrance.domain.typography.FontCatalog
 import com.codetoday.remembrance.ui.components.SquirclePreview
 import com.codetoday.remembrance.ui.theme.*
@@ -29,6 +29,7 @@ import com.codetoday.remembrance.ui.theme.*
 @Composable
 fun ReminderCard(
     reminder: ReminderItem,
+    strings: AppStrings,
     onUpdate: (ReminderItem) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -44,74 +45,81 @@ fun ReminderCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .glassmorphic(cornerRadius = 20.dp),
-        colors = CardDefaults.cardColors(containerColor = GlassSurfaceDark.copy(alpha = 0.70f)),
-        shape = RoundedCornerShape(20.dp)
+            .padding(vertical = 10.dp)
+            .premiumGlassmorphic(cornerRadius = 22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape = RoundedCornerShape(22.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
-            // Header: Position badge and delete button
+            // Header: Language badge, position badge, and delete icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Language badge
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = LimeGreen.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = "${reminder.language.displayName} • ${reminder.position.label}",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = LimeGreen,
-                        fontWeight = FontWeight.Bold
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = EmeraldPrimary.copy(alpha = 0.18f)
+                    ) {
+                        Text(
+                            text = reminder.language.displayName,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = EmeraldPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = PureWhite.copy(alpha = 0.08f)
+                    ) {
+                        Text(
+                            text = strings.positionNames[reminder.position] ?: reminder.position.label,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextLight.copy(alpha = 0.8f)
+                        )
+                    }
                 }
 
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete Reminder",
-                        tint = AccentRed.copy(alpha = 0.8f)
+                        contentDescription = strings.deleteConfirm,
+                        tint = AccentStopRed.copy(alpha = 0.85f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Text input box (Unicode friendly)
+            // Reminder Text Input
             OutlinedTextField(
                 value = reminder.text,
                 onValueChange = { onUpdate(reminder.copy(text = it)) },
-                label = { Text("Reminder Text (${reminder.language.displayName})") },
-                placeholder = {
-                    Text(
-                        when (reminder.language) {
-                            SupportedLanguage.BENGALI -> "যেমন: সুবহানাল্লাহ"
-                            SupportedLanguage.ENGLISH -> "e.g., Stay mindful & grateful"
-                            SupportedLanguage.ARABIC -> "مثال: سبحان الله وبحمده"
-                        }
-                    )
-                },
+                label = { Text(strings.reminderTextLabel) },
+                placeholder = { Text(strings.reminderPlaceholder) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = LimeGreen,
-                    unfocusedBorderColor = GlassBorderDark,
-                    focusedTextColor = PureWhite,
-                    unfocusedTextColor = PureWhite
+                    focusedBorderColor = EmeraldPrimary,
+                    unfocusedBorderColor = SurfaceGlassBorder,
+                    focusedTextColor = TextLight,
+                    unfocusedTextColor = TextLight,
+                    focusedLabelColor = EmeraldPrimary,
+                    unfocusedLabelColor = TextMuted
                 )
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Font selection dropdown
+            // Font Selector Dropdown
             ExposedDropdownMenuBox(
                 expanded = expandedFontDropdown,
                 onExpandedChange = { expandedFontDropdown = !expandedFontDropdown }
@@ -120,26 +128,29 @@ fun ReminderCard(
                     value = reminder.fontName,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Font Style (Top 10 Google Fonts)") },
+                    label = { Text(strings.fontStyleLabel) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedFontDropdown) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = LimeGreen,
-                        unfocusedBorderColor = GlassBorderDark,
-                        focusedTextColor = PureWhite,
-                        unfocusedTextColor = PureWhite
+                        focusedBorderColor = EmeraldPrimary,
+                        unfocusedBorderColor = SurfaceGlassBorder,
+                        focusedTextColor = TextLight,
+                        unfocusedTextColor = TextLight,
+                        focusedLabelColor = EmeraldPrimary,
+                        unfocusedLabelColor = TextMuted
                     )
                 )
                 ExposedDropdownMenu(
                     expanded = expandedFontDropdown,
-                    onDismissRequest = { expandedFontDropdown = false }
+                    onDismissRequest = { expandedFontDropdown = false },
+                    modifier = Modifier.background(SurfaceGlassDark)
                 ) {
                     fontsList.forEach { fontName ->
                         DropdownMenuItem(
-                            text = { Text(fontName) },
+                            text = { Text(fontName, color = TextLight) },
                             onClick = {
                                 onUpdate(reminder.copy(fontName = fontName))
                                 expandedFontDropdown = false
@@ -149,15 +160,21 @@ fun ReminderCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Duration: Slider + Input Box (Seconds)
-            Text(
-                text = "Display Duration: ${reminder.durationSeconds} seconds",
-                style = MaterialTheme.typography.bodyMedium,
-                color = PureWhite.copy(alpha = 0.85f),
-                fontWeight = FontWeight.SemiBold
-            )
+            // Duration: Slider + Numeric Input
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${strings.durationLabel}: ${reminder.durationSeconds} ${strings.secondsUnit}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextLight.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -168,9 +185,13 @@ fun ReminderCard(
                     valueRange = 1f..60f,
                     steps = 58,
                     modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(thumbColor = LimeGreen, activeTrackColor = LimeGreen)
+                    colors = SliderDefaults.colors(
+                        thumbColor = EmeraldPrimary,
+                        activeTrackColor = EmeraldPrimary,
+                        inactiveTrackColor = SurfaceGlassBorder
+                    )
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 OutlinedTextField(
                     value = reminder.durationSeconds.toString(),
                     onValueChange = {
@@ -179,20 +200,32 @@ fun ReminderCard(
                     },
                     modifier = Modifier.width(72.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(10.dp),
-                    singleLine = true
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = EmeraldPrimary,
+                        unfocusedBorderColor = SurfaceGlassBorder,
+                        focusedTextColor = TextLight,
+                        unfocusedTextColor = TextLight
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Frequency: Slider + Input Box (Minutes)
-            Text(
-                text = "Frequency (Interval): ${reminder.frequencyMinutes} minutes",
-                style = MaterialTheme.typography.bodyMedium,
-                color = PureWhite.copy(alpha = 0.85f),
-                fontWeight = FontWeight.SemiBold
-            )
+            // Frequency: Slider + Numeric Input
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${strings.frequencyLabel}: ${reminder.frequencyMinutes} ${strings.minutesUnit}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextLight.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -203,9 +236,13 @@ fun ReminderCard(
                     valueRange = 1f..180f,
                     steps = 178,
                     modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(thumbColor = LimeGreen, activeTrackColor = LimeGreen)
+                    colors = SliderDefaults.colors(
+                        thumbColor = EmeraldPrimary,
+                        activeTrackColor = EmeraldPrimary,
+                        inactiveTrackColor = SurfaceGlassBorder
+                    )
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 OutlinedTextField(
                     value = reminder.frequencyMinutes.toString(),
                     onValueChange = {
@@ -214,42 +251,51 @@ fun ReminderCard(
                     },
                     modifier = Modifier.width(72.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(10.dp),
-                    singleLine = true
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = EmeraldPrimary,
+                        unfocusedBorderColor = SurfaceGlassBorder,
+                        focusedTextColor = TextLight,
+                        unfocusedTextColor = TextLight
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Position selector dropdown
+            // Screen Position Dropdown
             ExposedDropdownMenuBox(
                 expanded = expandedPositionDropdown,
                 onExpandedChange = { expandedPositionDropdown = !expandedPositionDropdown }
             ) {
                 OutlinedTextField(
-                    value = reminder.position.label,
+                    value = strings.positionNames[reminder.position] ?: reminder.position.label,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Screen Position") },
+                    label = { Text(strings.positionLabel) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPositionDropdown) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = LimeGreen,
-                        unfocusedBorderColor = GlassBorderDark,
-                        focusedTextColor = PureWhite,
-                        unfocusedTextColor = PureWhite
+                        focusedBorderColor = EmeraldPrimary,
+                        unfocusedBorderColor = SurfaceGlassBorder,
+                        focusedTextColor = TextLight,
+                        unfocusedTextColor = TextLight,
+                        focusedLabelColor = EmeraldPrimary,
+                        unfocusedLabelColor = TextMuted
                     )
                 )
                 ExposedDropdownMenu(
                     expanded = expandedPositionDropdown,
-                    onDismissRequest = { expandedPositionDropdown = false }
+                    onDismissRequest = { expandedPositionDropdown = false },
+                    modifier = Modifier.background(SurfaceGlassDark)
                 ) {
                     OverlayPosition.values().forEach { pos ->
                         DropdownMenuItem(
-                            text = { Text(pos.label) },
+                            text = { Text(strings.positionNames[pos] ?: pos.label, color = TextLight) },
                             onClick = {
                                 onUpdate(reminder.copy(position = pos))
                                 expandedPositionDropdown = false
@@ -261,11 +307,11 @@ fun ReminderCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Live Preview of the Squircle overlay
+            // Live Squircle Preview
             Text(
-                text = "Live Squircle Preview:",
+                text = strings.livePreviewLabel,
                 style = MaterialTheme.typography.labelMedium,
-                color = PureWhite.copy(alpha = 0.6f)
+                color = TextMuted
             )
             SquirclePreview(reminder = reminder)
 
@@ -273,22 +319,22 @@ fun ReminderCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable { showStyleCustomizer = !showStyleCustomizer }
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if (showStyleCustomizer) "Hide Style Options" else "Customize Squircle Style",
+                    text = if (showStyleCustomizer) strings.hideStyleLabel else strings.customizeStyleLabel,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = LimeGreen,
+                    color = EmeraldPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
                 Icon(
                     imageVector = if (showStyleCustomizer) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = LimeGreen
+                    tint = EmeraldPrimary
                 )
             }
 
@@ -298,33 +344,38 @@ fun ReminderCard(
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                 ) {
-                    // Opacity slider
                     Text(
-                        text = "Background Opacity: ${(reminder.backgroundOpacity * 100).toInt()}% (Default: 65%)",
+                        text = "${strings.opacityLabel}: ${(reminder.backgroundOpacity * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = PureWhite.copy(alpha = 0.7f)
+                        color = TextMuted
                     )
                     Slider(
                         value = reminder.backgroundOpacity,
                         onValueChange = { onUpdate(reminder.copy(backgroundOpacity = it)) },
                         valueRange = 0.2f..1.0f,
-                        colors = SliderDefaults.colors(thumbColor = LimeGreen, activeTrackColor = LimeGreen)
+                        colors = SliderDefaults.colors(
+                            thumbColor = EmeraldPrimary,
+                            activeTrackColor = EmeraldPrimary,
+                            inactiveTrackColor = SurfaceGlassBorder
+                        )
                     )
 
-                    // Corner radius slider (Squircle roundness)
                     Text(
-                        text = "Squircle Corner Radius: ${reminder.cornerRadiusDp.toInt()} dp",
+                        text = "${strings.cornerRadiusLabel}: ${reminder.cornerRadiusDp.toInt()} dp",
                         style = MaterialTheme.typography.bodySmall,
-                        color = PureWhite.copy(alpha = 0.7f)
+                        color = TextMuted
                     )
                     Slider(
                         value = reminder.cornerRadiusDp,
                         onValueChange = { onUpdate(reminder.copy(cornerRadiusDp = it)) },
                         valueRange = 8f..40f,
-                        colors = SliderDefaults.colors(thumbColor = LimeGreen, activeTrackColor = LimeGreen)
+                        colors = SliderDefaults.colors(
+                            thumbColor = EmeraldPrimary,
+                            activeTrackColor = EmeraldPrimary,
+                            inactiveTrackColor = SurfaceGlassBorder
+                        )
                     )
 
-                    // Reset to default button
                     TextButton(
                         onClick = {
                             onUpdate(
@@ -340,7 +391,7 @@ fun ReminderCard(
                             )
                         }
                     ) {
-                        Text("Reset to Default (Lime Green 65% + Black Text)", color = PureWhite.copy(alpha = 0.6f))
+                        Text(strings.resetToDefault, color = TextMuted)
                     }
                 }
             }

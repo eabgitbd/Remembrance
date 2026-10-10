@@ -1,10 +1,8 @@
 package com.codetoday.remembrance.ui.permission
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,14 +19,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.codetoday.remembrance.ui.theme.LimeGreen
-import com.codetoday.remembrance.ui.theme.PureBlack
-import com.codetoday.remembrance.ui.theme.PureWhite
-import com.codetoday.remembrance.ui.theme.glassmorphic
+import com.codetoday.remembrance.domain.localization.AppStrings
+import com.codetoday.remembrance.ui.theme.*
 
 @Composable
 fun PermissionGateDialog(
     hasOverlayPermission: Boolean,
+    strings: AppStrings,
     onRefreshPermissions: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -39,8 +36,8 @@ fun PermissionGateDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .glassmorphic(cornerRadius = 24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)),
+                .premiumGlassmorphic(cornerRadius = 24.dp, elevation = 12.dp),
+            colors = CardDefaults.cardColors(containerColor = SurfaceGlassDark.copy(alpha = 0.94f)),
             shape = RoundedCornerShape(24.dp)
         ) {
             Column(
@@ -52,57 +49,57 @@ fun PermissionGateDialog(
                 Icon(
                     imageVector = Icons.Default.Layers,
                     contentDescription = null,
-                    tint = LimeGreen,
+                    tint = EmeraldPrimary,
                     modifier = Modifier.size(48.dp)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Permission Required",
+                    text = strings.permissionTitle,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = PureWhite
+                    color = TextLight
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "To periodically display floating remembrances over other apps and maintain lightweight background scheduling, please enable the permissions below.",
+                    text = strings.permissionDesc,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = PureWhite.copy(alpha = 0.75f),
+                    color = TextMuted,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
-                // Overlay Permission Button
                 Button(
                     onClick = {
                         requestOverlayPermission(context)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (hasOverlayPermission) PureWhite.copy(alpha = 0.15f) else LimeGreen
+                        containerColor = if (hasOverlayPermission) SurfaceGlassHighlight else EmeraldPrimary
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Layers,
                         contentDescription = null,
-                        tint = if (hasOverlayPermission) PureWhite else PureBlack
+                        tint = if (hasOverlayPermission) TextLight else PureBlack
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (hasOverlayPermission) "✓ Display Over Apps (Granted)" else "Enable Display Over Other Apps",
-                        color = if (hasOverlayPermission) PureWhite else PureBlack,
+                        text = if (hasOverlayPermission) strings.overlayGranted else strings.enableOverlayBtn,
+                        color = if (hasOverlayPermission) TextLight else PureBlack,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // App Settings Button (for battery optimization & notifications)
                 OutlinedButton(
                     onClick = {
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -110,18 +107,21 @@ fun PermissionGateDialog(
                         }
                         context.startActivity(intent)
                     },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextLight)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
-                        tint = PureWhite
+                        tint = TextLight
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Notification & Battery Settings",
-                        color = PureWhite
+                        text = strings.settingsBtn,
+                        color = TextLight
                     )
                 }
 
@@ -132,12 +132,14 @@ fun PermissionGateDialog(
                         onRefreshPermissions()
                         onDismiss()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = PureWhite),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    colors = ButtonDefaults.buttonColors(containerColor = TextLight),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
                 ) {
                     Text(
-                        text = "I've Enabled Permissions",
+                        text = strings.permissionsDoneBtn,
                         color = PureBlack,
                         fontWeight = FontWeight.Bold
                     )

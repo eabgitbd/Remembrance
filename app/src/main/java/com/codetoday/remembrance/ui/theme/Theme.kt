@@ -9,15 +9,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = LimeGreen,
-    secondary = AccentGreen,
-    background = DarkBackground,
-    surface = GlassSurfaceDark,
+private val PremiumDarkColorScheme = darkColorScheme(
+    primary = EmeraldPrimary,
+    secondary = MintAccent,
+    tertiary = SageMuted,
+    background = ObsidianBackground,
+    surface = SurfaceGlassDark,
     onPrimary = PureBlack,
-    onSecondary = PureWhite,
-    onBackground = PureWhite,
-    onSurface = PureWhite
+    onSecondary = PureBlack,
+    onBackground = TextLight,
+    onSurface = TextLight
 )
 
 @Composable
@@ -27,15 +28,15 @@ fun RemembranceTheme(content: @Composable () -> Unit) {
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = DarkBackground.toArgb()
-                window.navigationBarColor = DarkBackground.toArgb()
+                window.statusBarColor = ObsidianBackground.toArgb()
+                window.navigationBarColor = ObsidianBackground.toArgb()
                 WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
             }
         }
     }
 
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = PremiumDarkColorScheme,
         content = content
     )
 }

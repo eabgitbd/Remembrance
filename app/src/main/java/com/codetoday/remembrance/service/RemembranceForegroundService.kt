@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.codetoday.remembrance.R
 import com.codetoday.remembrance.RemembranceApp
@@ -23,6 +24,8 @@ class RemembranceForegroundService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var overlayWindowManager: OverlayWindowManager
     private lateinit var scheduler: CollisionFreeScheduler
+    private var remindersJob: Job? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -32,9 +35,21 @@ class RemembranceForegroundService : Service() {
             scheduler.onOverlayDismissed()
         }
 
-        // Listen for reminder display events and show floating overlays
+        try {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            wakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Remembrance::ServiceLock")
+        } catch (e: Exception) {
+            // ignore
+        }
+
+        // Listen for reminder display events and show floating overlays + heads-up alert
         serviceScope.launch {
             scheduler.displayEvents.collect { event ->
+                try {
+                    wakeLock?.acquire(3000L) // Brief CPU wake lock while dispatching
+                } catch (e: Exception) {
+                    // ignore
+                }
                 overlayWindowManager.showReminderOverlay(event.reminder) {
                     scheduler.onOverlayDismissed()
                 }
@@ -70,12 +85,21 @@ class RemembranceForegroundService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        // Load active reminders from database and feed to collision-free scheduler
-        serviceScope.launch(Dispatchers.IO) {
+        // Continuously observe Room database for real-time reminder updates
+        remindersJob?.cancel()
+        var hasInitialized = false
+        remindersJob = serviceScope.launch(Dispatchers.IO) {
             val repository = (application as RemembranceApp).repository
-            val activeReminders = repository.getActiveReminders()
-            withContext(Dispatchers.Main) {
-                scheduler.start(activeReminders)
+            repository.allReminders.collect { remindersList ->
+                val activeReminders = remindersList.filter { it.isEnabled }
+                withContext(Dispatchers.Main) {
+                    if (!hasInitialized) {
+                        hasInitialized = true
+                        scheduler.start(activeReminders)
+                    } else {
+                        scheduler.updateReminders(activeReminders)
+                    }
+                }
             }
         }
     }
@@ -84,10 +108,16 @@ class RemembranceForegroundService : Service() {
         _isRunningState.value = false
         setSavedRunningState(this, false)
 
+        remindersJob?.cancel()
         scheduler.stop()
         overlayWindowManager.dismissCurrentOverlay()
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 
@@ -115,7 +145,7 @@ class RemembranceForegroundService : Service() {
         return NotificationCompat.Builder(this, RemembranceApp.CHANNEL_SERVICE_ID)
             .setContentTitle(getString(R.string.notification_running_title))
             .setContentText(getString(R.string.notification_running_desc))
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(openPendingIntent)
@@ -130,8 +160,16 @@ class RemembranceForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         _isRunningState.value = false
+        remindersJob?.cancel()
         serviceScope.cancel()
         overlayWindowManager.dismissCurrentOverlay()
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

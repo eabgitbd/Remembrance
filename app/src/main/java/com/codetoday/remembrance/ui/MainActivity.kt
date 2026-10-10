@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
+import com.codetoday.remembrance.domain.localization.AppStrings
 import com.codetoday.remembrance.ui.home.HomeScreen
 import com.codetoday.remembrance.ui.home.RemembranceViewModel
 import com.codetoday.remembrance.ui.permission.PermissionGateDialog
@@ -36,6 +37,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RemembranceTheme {
+                val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+                val strings = remember(selectedLanguage) {
+                    AppStrings.forLanguage(selectedLanguage)
+                }
+
                 var hasOverlayPermission by remember {
                     mutableStateOf(Settings.canDrawOverlays(this@MainActivity))
                 }
@@ -48,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 if (showPermissionDialog) {
                     PermissionGateDialog(
                         hasOverlayPermission = hasOverlayPermission,
+                        strings = strings,
                         onRefreshPermissions = {
                             hasOverlayPermission = Settings.canDrawOverlays(this@MainActivity)
                             if (hasOverlayPermission) {
@@ -65,9 +72,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // If user returned from system settings, auto-check overlay permission
         if (Settings.canDrawOverlays(this)) {
-            // Permission active
+            // Permission verified
         }
     }
 }

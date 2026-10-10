@@ -3,12 +3,14 @@ package com.codetoday.remembrance
 import com.codetoday.remembrance.data.model.OverlayPosition
 import com.codetoday.remembrance.data.model.ReminderItem
 import com.codetoday.remembrance.data.model.SupportedLanguage
+import com.codetoday.remembrance.domain.localization.AppStrings
 import com.codetoday.remembrance.domain.scheduler.CollisionFreeScheduler
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -57,5 +59,20 @@ class CollisionFreeSchedulerTest {
         assertEquals(OverlayPosition.TOP, defaultReminder.position)
         assertEquals(SupportedLanguage.BENGALI, defaultReminder.language)
         assertEquals("Noto Serif Bengali", defaultReminder.fontName)
+    }
+
+    @Test
+    fun testLocalizationStringsCoverage() {
+        val bengali = AppStrings.forLanguage(SupportedLanguage.BENGALI)
+        val english = AppStrings.forLanguage(SupportedLanguage.ENGLISH)
+        val arabic = AppStrings.forLanguage(SupportedLanguage.ARABIC)
+
+        assertEquals("স্মরণ", bengali.appTitle)
+        assertEquals("Remembrance", english.appTitle)
+        assertEquals("الذكر", arabic.appTitle)
+
+        assertNotNull(bengali.startService)
+        assertNotNull(english.startService)
+        assertNotNull(arabic.startService)
     }
 }
