@@ -1,0 +1,7 @@
+<resources>
+    <color name="lime_green">#32CD32</color>
+    <color name="lime_green_overlay">#A632CD32</color>
+    <color name="pure_black">#000000</color>
+    <color name="glass_surface">#181E24</color>
+    <color name="glass_border">#33FFFFFF</color>
+</resources>

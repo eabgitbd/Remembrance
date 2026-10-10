@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Remembrance</string>
+    <string name="notification_channel_name">Remembrance Active Service</string>
+    <string name="notification_channel_desc">Shows persistent status indicating Remembrance background service is running</string>
+    <string name="notification_running_title">Remembrance is Running</string>
+    <string name="notification_running_desc">Displaying scheduled reminders on screen</string>
+    <string name="action_stop">Stop Service</string>
+    <string name="action_start">Start Service</string>
+    <string name="about_developer_title">Developer</string>
+    <string name="about_developer_name">CodeToday</string>
+    <string name="about_facebook_btn">Visit us on Facebook</string>
+    <string name="facebook_url">https://www.facebook.com/people/CodeToday/61592160592518/</string>
+</resources>
