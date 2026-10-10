@@ -28,7 +28,6 @@ import com.codetoday.remembrance.domain.localization.AppStrings
 import com.codetoday.remembrance.ui.about.AboutDialog
 import com.codetoday.remembrance.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: RemembranceViewModel,
@@ -39,7 +38,6 @@ fun HomeScreen(
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     var showAboutDialog by remember { mutableStateOf(false) }
 
-    // Dynamically retrieve translated strings for the entire app UI
     val strings = remember(selectedLanguage) {
         AppStrings.forLanguage(selectedLanguage)
     }
@@ -53,39 +51,7 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = ObsidianBackground,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = strings.appTitle,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = TextLight,
-                            fontSize = 24.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = strings.appSubtitle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = EmeraldPrimary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showAboutDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = strings.aboutTitle,
-                            tint = TextLight.copy(alpha = 0.85f)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        },
         bottomBar = {
-            // Floating sticky action bar at the bottom with ambient glow
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -138,9 +104,50 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(bottom = 20.dp)
         ) {
-            // Top App Language Switcher Segmented Pills
+            // Flexible App Header (Never clips multiline titles or subtitles)
             item {
+                Spacer(modifier = Modifier.statusBarsPadding())
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = strings.appTitle,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TextLight,
+                            fontSize = 26.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = strings.appSubtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            lineHeight = 22.sp,
+                            color = EmeraldPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    IconButton(
+                        onClick = { showAboutDialog = true },
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = strings.aboutTitle,
+                            tint = TextLight.copy(alpha = 0.85f),
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            // Top App Language Switcher
+            item {
                 Text(
                     text = strings.selectLanguage,
                     style = MaterialTheme.typography.labelMedium,

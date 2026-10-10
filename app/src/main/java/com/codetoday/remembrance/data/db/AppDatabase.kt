@@ -28,7 +28,7 @@ class Converters {
     }
 }
 
-@Database(entities = [ReminderItem::class], version = 1, exportSchema = false)
+@Database(entities = [ReminderItem::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -44,7 +44,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "remembrance_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

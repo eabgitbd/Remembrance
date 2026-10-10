@@ -85,6 +85,14 @@ class RemembranceForegroundService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        try {
+            if (wakeLock?.isHeld != true) {
+                wakeLock?.acquire()
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+
         // Continuously observe Room database for real-time reminder updates
         remindersJob?.cancel()
         var hasInitialized = false
@@ -111,6 +119,14 @@ class RemembranceForegroundService : Service() {
         remindersJob?.cancel()
         scheduler.stop()
         overlayWindowManager.dismissCurrentOverlay()
+
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)

@@ -59,6 +59,11 @@ class CollisionFreeSchedulerTest {
         assertEquals(OverlayPosition.TOP, defaultReminder.position)
         assertEquals(SupportedLanguage.BENGALI, defaultReminder.language)
         assertEquals("Noto Serif Bengali", defaultReminder.fontName)
+        assertEquals("MINUTES", defaultReminder.frequencyUnit)
+        assertEquals(60_000L, defaultReminder.intervalMs)
+
+        val secondsReminder = defaultReminder.copy(frequencyMinutes = 15, frequencyUnit = "SECONDS")
+        assertEquals(15_000L, secondsReminder.intervalMs)
     }
 
     @Test

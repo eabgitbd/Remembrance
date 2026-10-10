@@ -37,7 +37,8 @@ class RemembranceViewModel(application: Application) : AndroidViewModel(applicat
                         language = SupportedLanguage.BENGALI,
                         fontName = "Noto Serif Bengali",
                         durationSeconds = 5,
-                        frequencyMinutes = 10,
+                        frequencyMinutes = 1,
+                        frequencyUnit = "MINUTES",
                         position = OverlayPosition.TOP
                     )
                 )
@@ -53,7 +54,7 @@ class RemembranceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             val defaultText = when (language) {
                 SupportedLanguage.BENGALI -> "আলহামদুলিল্লাহ"
-                SupportedLanguage.ENGLISH -> "Remember your purpose & stay grateful"
+                SupportedLanguage.ENGLISH -> "Stay mindful & grateful"
                 SupportedLanguage.ARABIC -> "لا إله إلا الله"
             }
             val defaultFont = language.defaultFont
@@ -64,7 +65,8 @@ class RemembranceViewModel(application: Application) : AndroidViewModel(applicat
                     language = language,
                     fontName = defaultFont,
                     durationSeconds = 5,
-                    frequencyMinutes = 15,
+                    frequencyMinutes = 1,
+                    frequencyUnit = "MINUTES",
                     position = OverlayPosition.TOP
                 )
             )

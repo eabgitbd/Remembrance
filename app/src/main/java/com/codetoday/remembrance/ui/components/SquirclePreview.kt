@@ -50,8 +50,10 @@ fun SquirclePreview(
                 text = if (reminder.text.isBlank()) "سُبْحَانَ اللَّهِ • সুবহানাল্লাহ • Peace" else reminder.text,
                 fontFamily = fontFamily,
                 fontSize = reminder.fontSizeSp.sp,
+                lineHeight = (reminder.fontSizeSp * 1.45f).sp,
                 color = textColor,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                softWrap = true
             )
         }
     }

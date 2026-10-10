@@ -10,8 +10,9 @@ data class ReminderItem(
     val text: String,
     val language: SupportedLanguage = SupportedLanguage.BENGALI,
     val fontName: String = "Noto Serif Bengali",
-    val durationSeconds: Int = 5,       // display duration in seconds (1..120)
-    val frequencyMinutes: Int = 10,     // display frequency interval in minutes (1..360)
+    val durationSeconds: Int = 5,          // display duration in seconds (1..120)
+    val frequencyMinutes: Int = 1,        // numeric value for interval (seconds or minutes)
+    val frequencyUnit: String = "MINUTES", // "SECONDS" or "MINUTES"
     val position: OverlayPosition = OverlayPosition.TOP,
     
     // Squircle styling customization
@@ -25,4 +26,11 @@ data class ReminderItem(
     
     val isEnabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    val intervalMs: Long
+        get() = if (frequencyUnit.equals("SECONDS", ignoreCase = true)) {
+            (frequencyMinutes * 1000L).coerceAtLeast(3000L)
+        } else {
+            (frequencyMinutes * 60 * 1000L).coerceAtLeast(5000L)
+        }
+}

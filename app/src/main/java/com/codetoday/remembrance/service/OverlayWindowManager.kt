@@ -1,5 +1,6 @@
 package com.codetoday.remembrance.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -22,6 +23,7 @@ import com.codetoday.remembrance.R
 import com.codetoday.remembrance.data.model.OverlayPosition
 import com.codetoday.remembrance.data.model.ReminderItem
 import com.codetoday.remembrance.data.model.SupportedLanguage
+import com.codetoday.remembrance.domain.typography.FontCatalog
 
 class OverlayWindowManager(private val context: Context) {
 
@@ -48,6 +50,7 @@ class OverlayWindowManager(private val context: Context) {
                 description = "Shows heads-up alert when a remembrance triggers"
                 enableVibration(false)
                 setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -57,7 +60,7 @@ class OverlayWindowManager(private val context: Context) {
         mainHandler.post {
             dismissCurrentOverlay()
 
-            // Also post a heads-up notification as a guaranteed channel across all active apps
+            // Post a high-priority notification to guarantee system heads-up over other apps
             postHeadsUpNotification(reminder)
 
             if (!Settings.canDrawOverlays(context)) {
@@ -73,10 +76,9 @@ class OverlayWindowManager(private val context: Context) {
                 windowManager.addView(overlayView, layoutParams)
                 currentOverlayView = overlayView
 
-                // Gentle fade-in
                 overlayView.alpha = 0f
-                overlayView.scaleX = 0.92f
-                overlayView.scaleY = 0.92f
+                overlayView.scaleX = 0.94f
+                overlayView.scaleY = 0.94f
                 overlayView.animate()
                     .alpha(1f)
                     .scaleX(1f)
@@ -86,21 +88,19 @@ class OverlayWindowManager(private val context: Context) {
 
                 val durationMs = (reminder.durationSeconds * 1000L).coerceAtLeast(2000L)
 
-                // Scheduled dismissal
                 dismissRunnable = Runnable {
                     safelyRemoveOverlayView(overlayView, onComplete)
                 }
                 mainHandler.postDelayed(dismissRunnable!!, durationMs)
 
-                // Watchdog runnable ensures callback is 100% invoked even if animation fails
+                // Safety watchdog runnable
                 safetyWatchdogRunnable = Runnable {
                     if (currentOverlayView == overlayView) {
                         safelyRemoveOverlayView(overlayView, onComplete)
                     }
                 }
-                mainHandler.postDelayed(safetyWatchdogRunnable!!, durationMs + 1000L)
+                mainHandler.postDelayed(safetyWatchdogRunnable!!, durationMs + 800L)
 
-                // Tap to dismiss early
                 overlayView.setOnClickListener {
                     dismissRunnable?.let { mainHandler.removeCallbacks(it) }
                     safetyWatchdogRunnable?.let { mainHandler.removeCallbacks(it) }
@@ -126,14 +126,16 @@ class OverlayWindowManager(private val context: Context) {
                 .setContentText(reminder.text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(reminder.text))
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
                 .setTimeoutAfter(reminder.durationSeconds * 1000L)
                 .build()
 
             NotificationManagerCompat.from(context).notify(REMINDER_NOTIFICATION_ID, notification)
         } catch (e: Exception) {
-            // Notification permission might be withheld
+            // Permission might be pending
         }
     }
 
@@ -142,7 +144,7 @@ class OverlayWindowManager(private val context: Context) {
         safetyWatchdogRunnable?.let { mainHandler.removeCallbacks(it) }
 
         try {
-            view.animate().alpha(0f).scaleX(0.92f).scaleY(0.92f).setDuration(180).start()
+            view.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(180).start()
         } catch (e: Exception) {
             // ignore
         }
@@ -186,8 +188,8 @@ class OverlayWindowManager(private val context: Context) {
             clipToPadding = false
         }
 
-        val paddingH = dpToPx(18f)
-        val paddingV = dpToPx(12f)
+        val paddingH = dpToPx(20f)
+        val paddingV = dpToPx(14f)
 
         val textView = TextView(context).apply {
             text = reminder.text
@@ -195,7 +197,16 @@ class OverlayWindowManager(private val context: Context) {
             setTextColor(parseColorOrDefault(reminder.textColorHex, Color.BLACK))
             gravity = Gravity.CENTER
             setPadding(paddingH, paddingV, paddingH, paddingV)
-            maxWidth = (context.resources.displayMetrics.widthPixels * 0.88f).toInt()
+            maxWidth = (context.resources.displayMetrics.widthPixels * 0.90f).toInt()
+
+            // Apply selected custom Typeface directly to TextView
+            typeface = FontCatalog.getTypeface(reminder.fontName, reminder.language)
+
+            // Multiline text handling without truncation
+            setSingleLine(false)
+            maxLines = 15
+            includeFontPadding = true
+            setLineSpacing(dpToPx(6f).toFloat(), 1.25f)
 
             if (reminder.language == SupportedLanguage.ARABIC) {
                 textDirection = View.TEXT_DIRECTION_RTL
@@ -244,9 +255,10 @@ class OverlayWindowManager(private val context: Context) {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        // Essential flags for displaying reliably above other apps without tapjacking blocks
         val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -259,11 +271,11 @@ class OverlayWindowManager(private val context: Context) {
         when (position) {
             OverlayPosition.TOP -> {
                 lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                lp.y = dpToPx(48f)
+                lp.y = dpToPx(52f)
             }
             OverlayPosition.SEMI_TOP -> {
                 lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                lp.y = dpToPx(130f)
+                lp.y = dpToPx(140f)
             }
             OverlayPosition.MIDDLE -> {
                 lp.gravity = Gravity.CENTER
@@ -271,11 +283,11 @@ class OverlayWindowManager(private val context: Context) {
             }
             OverlayPosition.SEMI_BOTTOM -> {
                 lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                lp.y = dpToPx(130f)
+                lp.y = dpToPx(140f)
             }
             OverlayPosition.BOTTOM -> {
                 lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                lp.y = dpToPx(48f)
+                lp.y = dpToPx(52f)
             }
         }
 

@@ -42,6 +42,8 @@ fun ReminderCard(
         FontCatalog.getFontsForLanguage(reminder.language)
     }
 
+    val isSecondsUnit = reminder.frequencyUnit.equals("SECONDS", ignoreCase = true)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -55,7 +57,7 @@ fun ReminderCard(
                 .fillMaxWidth()
                 .padding(18.dp)
         ) {
-            // Header: Language badge, position badge, and delete icon
+            // Header: Language badge, position badge, and delete button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -99,13 +101,19 @@ fun ReminderCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Reminder Text Input
+            // Multiline Reminder Text Input (generous line height to prevent any clipping)
             OutlinedTextField(
                 value = reminder.text,
                 onValueChange = { onUpdate(reminder.copy(text = it)) },
                 label = { Text(strings.reminderTextLabel) },
                 placeholder = { Text(strings.reminderPlaceholder) },
                 modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+                maxLines = 6,
+                textStyle = LocalTextStyle.current.copy(
+                    lineHeight = 24.sp,
+                    fontSize = 16.sp
+                ),
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = EmeraldPrimary,
@@ -150,7 +158,7 @@ fun ReminderCard(
                 ) {
                     fontsList.forEach { fontName ->
                         DropdownMenuItem(
-                            text = { Text(fontName, color = TextLight) },
+                            text = { Text(fontName, color = TextLight, fontWeight = FontWeight.Medium) },
                             onClick = {
                                 onUpdate(reminder.copy(fontName = fontName))
                                 expandedFontDropdown = false
@@ -162,7 +170,7 @@ fun ReminderCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Duration: Slider + Numeric Input
+            // Display Duration: Slider + Numeric Input (Seconds)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -213,28 +221,66 @@ fun ReminderCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Frequency: Slider + Numeric Input
+            // Frequency Interval: Dual Unit Switcher (Seconds / Minutes) + Slider + Input
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${strings.frequencyLabel}: ${reminder.frequencyMinutes} ${strings.minutesUnit}",
+                    text = "${strings.frequencyLabel}: ${reminder.frequencyMinutes} ${if (isSecondsUnit) strings.secondsUnit else strings.minutesUnit}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextLight.copy(alpha = 0.9f),
                     fontWeight = FontWeight.SemiBold
                 )
+
+                // Seconds vs Minutes Unit Toggle Pill
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceGlassHighlight.copy(alpha = 0.1f))
+                        .padding(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isSecondsUnit) EmeraldPrimary else Color.Transparent)
+                            .clickable { onUpdate(reminder.copy(frequencyUnit = "SECONDS")) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = strings.secondsUnit.take(3),
+                            color = if (isSecondsUnit) PureBlack else TextLight,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (!isSecondsUnit) EmeraldPrimary else Color.Transparent)
+                            .clickable { onUpdate(reminder.copy(frequencyUnit = "MINUTES")) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = strings.minutesUnit.take(3),
+                            color = if (!isSecondsUnit) PureBlack else TextLight,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val maxVal = if (isSecondsUnit) 120f else 180f
                 Slider(
-                    value = reminder.frequencyMinutes.toFloat(),
+                    value = reminder.frequencyMinutes.toFloat().coerceIn(1f, maxVal),
                     onValueChange = { onUpdate(reminder.copy(frequencyMinutes = it.toInt())) },
-                    valueRange = 1f..180f,
-                    steps = 178,
+                    valueRange = 1f..maxVal,
                     modifier = Modifier.weight(1f),
                     colors = SliderDefaults.colors(
                         thumbColor = EmeraldPrimary,
@@ -246,7 +292,8 @@ fun ReminderCard(
                 OutlinedTextField(
                     value = reminder.frequencyMinutes.toString(),
                     onValueChange = {
-                        val v = it.toIntOrNull()?.coerceIn(1, 360) ?: 1
+                        val limit = if (isSecondsUnit) 600 else 360
+                        val v = it.toIntOrNull()?.coerceIn(1, limit) ?: 1
                         onUpdate(reminder.copy(frequencyMinutes = v))
                     },
                     modifier = Modifier.width(72.dp),

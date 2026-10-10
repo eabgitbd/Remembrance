@@ -21,6 +21,10 @@
     <!-- Battery optimization exemption request for background reliability -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Exact alarms for precision intervals when other apps are active -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
     <application
         android:name=".RemembranceApp"
         android:allowBackup="true"
