@@ -21,6 +21,12 @@ class CollisionFreeScheduler(
     private val previousIntervalMap = ConcurrentHashMap<Long, Long>()
     private var schedulerJob: Job? = null
 
+    /**
+     * Callback invoked whenever a new earliest wake-up time is determined,
+     * so that the host service can program AlarmManager.
+     */
+    var onScheduleAlarmRequested: ((triggerAtMs: Long, reminderId: Long) -> Unit)? = null
+
     @Volatile
     private var isOverlayCurrentlyActive = false
 
@@ -40,15 +46,17 @@ class CollisionFreeScheduler(
             val interval = reminder.intervalMs
             previousIntervalMap[reminder.id] = interval
 
-            // First reminder triggers quickly (1.5 seconds) so user gets immediate visual confirmation
+            // First reminder triggers quickly (1.5s) for instant user feedback, subsequent staggered
             val initialDelay = 1500L + (index * (reminder.durationSeconds * 1000L + bufferBetweenRemindersMs))
             nextScheduledTimeMap[reminder.id] = now + initialDelay
         }
 
+        requestNextAlarm()
+
         schedulerJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 checkAndDispatchReminders()
-                delay(1000L) // 1-second precision tick
+                delay(1000L) // In-memory precision tick for active screen
             }
         }
     }
@@ -59,13 +67,12 @@ class CollisionFreeScheduler(
         currentReminders.addAll(active)
 
         val now = System.currentTimeMillis()
-        active.forEachIndexed { index, reminder ->
+        active.forEachIndexed { _, reminder ->
             val newInterval = reminder.intervalMs
             val oldInterval = previousIntervalMap[reminder.id]
 
             if (oldInterval == null || oldInterval != newInterval || !nextScheduledTimeMap.containsKey(reminder.id)) {
                 previousIntervalMap[reminder.id] = newInterval
-                // Reschedule with the user's newly updated frequency interval
                 nextScheduledTimeMap[reminder.id] = now + newInterval
             }
         }
@@ -74,6 +81,8 @@ class CollisionFreeScheduler(
         val activeIds = active.map { it.id }.toSet()
         nextScheduledTimeMap.keys.retainAll(activeIds)
         previousIntervalMap.keys.retainAll(activeIds)
+
+        requestNextAlarm()
     }
 
     fun stop() {
@@ -86,10 +95,31 @@ class CollisionFreeScheduler(
         activeOverlayEndsAtMs = 0L
     }
 
+    /**
+     * Called directly when ReminderAlarmReceiver delivers an RTC hardware wakeup.
+     */
+    fun onAlarmTriggered(reminderId: Long) {
+        val now = System.currentTimeMillis()
+        if (isOverlayCurrentlyActive && now < activeOverlayEndsAtMs) {
+            // Still displaying an active reminder; reschedule slightly later
+            nextScheduledTimeMap[reminderId] = activeOverlayEndsAtMs + bufferBetweenRemindersMs
+            requestNextAlarm()
+            return
+        }
+
+        val reminder = currentReminders.find { it.id == reminderId }
+            ?: currentReminders.minByOrNull { nextScheduledTimeMap[it.id] ?: Long.MAX_VALUE }
+
+        if (reminder != null) {
+            dispatchReminder(reminder)
+        } else {
+            requestNextAlarm()
+        }
+    }
+
     private suspend fun checkAndDispatchReminders() {
         val now = System.currentTimeMillis()
 
-        // Failsafe watchdog: unlock if timeout has elapsed
         if (isOverlayCurrentlyActive && now >= activeOverlayEndsAtMs) {
             isOverlayCurrentlyActive = false
         }
@@ -108,24 +138,34 @@ class CollisionFreeScheduler(
         val selectedReminder = dueReminders.minByOrNull { nextScheduledTimeMap[it.id] ?: Long.MAX_VALUE }
             ?: return
 
-        val durationMs = (selectedReminder.durationSeconds * 1000L).coerceAtLeast(2000L)
+        dispatchReminder(selectedReminder)
+    }
+
+    private fun dispatchReminder(reminder: ReminderItem) {
+        val now = System.currentTimeMillis()
+        val durationMs = (reminder.durationSeconds * 1000L).coerceAtLeast(2000L)
         isOverlayCurrentlyActive = true
         activeOverlayEndsAtMs = now + durationMs + bufferBetweenRemindersMs
 
-        // Schedule next occurrence based on reminder interval
-        nextScheduledTimeMap[selectedReminder.id] = activeOverlayEndsAtMs + selectedReminder.intervalMs
+        // Schedule next occurrence based on frequency interval
+        nextScheduledTimeMap[reminder.id] = activeOverlayEndsAtMs + reminder.intervalMs
 
-        // Prevent collisions: stagger any other due reminders
-        dueReminders.filter { it.id != selectedReminder.id }.forEachIndexed { idx, other ->
-            nextScheduledTimeMap[other.id] = activeOverlayEndsAtMs + ((idx + 1) * bufferBetweenRemindersMs)
+        // Stagger any other pending reminders to prevent visual collision
+        currentReminders.filter { it.id != reminder.id }.forEachIndexed { idx, other ->
+            val existing = nextScheduledTimeMap[other.id] ?: (now + bufferBetweenRemindersMs)
+            if (existing <= activeOverlayEndsAtMs) {
+                nextScheduledTimeMap[other.id] = activeOverlayEndsAtMs + ((idx + 1) * bufferBetweenRemindersMs)
+            }
         }
 
-        _displayEvents.emit(
+        _displayEvents.tryEmit(
             ReminderDisplayEvent(
-                reminder = selectedReminder,
+                reminder = reminder,
                 durationMs = durationMs
             )
         )
+
+        requestNextAlarm()
 
         // Safety watchdog coroutine
         scope.launch {
@@ -136,9 +176,18 @@ class CollisionFreeScheduler(
         }
     }
 
+    private fun requestNextAlarm() {
+        val earliest = nextScheduledTimeMap.entries
+            .minByOrNull { it.value }
+            ?: return
+
+        onScheduleAlarmRequested?.invoke(earliest.value, earliest.key)
+    }
+
     fun onOverlayDismissed() {
         isOverlayCurrentlyActive = false
         activeOverlayEndsAtMs = System.currentTimeMillis()
+        requestNextAlarm()
     }
 }
 

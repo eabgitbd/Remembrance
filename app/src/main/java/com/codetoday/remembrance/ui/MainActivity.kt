@@ -45,8 +45,11 @@ class MainActivity : ComponentActivity() {
                 var hasOverlayPermission by remember {
                     mutableStateOf(Settings.canDrawOverlays(this@MainActivity))
                 }
+                var hasBatteryOptimizationIgnored by remember {
+                    mutableStateOf(com.codetoday.remembrance.ui.permission.isIgnoringBatteryOptimizations(this@MainActivity))
+                }
                 var showPermissionDialog by remember {
-                    mutableStateOf(!hasOverlayPermission)
+                    mutableStateOf(!hasOverlayPermission || !hasBatteryOptimizationIgnored)
                 }
 
                 HomeScreen(viewModel = viewModel)
@@ -54,10 +57,12 @@ class MainActivity : ComponentActivity() {
                 if (showPermissionDialog) {
                     PermissionGateDialog(
                         hasOverlayPermission = hasOverlayPermission,
+                        hasBatteryOptimizationIgnored = hasBatteryOptimizationIgnored,
                         strings = strings,
                         onRefreshPermissions = {
                             hasOverlayPermission = Settings.canDrawOverlays(this@MainActivity)
-                            if (hasOverlayPermission) {
+                            hasBatteryOptimizationIgnored = com.codetoday.remembrance.ui.permission.isIgnoringBatteryOptimizations(this@MainActivity)
+                            if (hasOverlayPermission && hasBatteryOptimizationIgnored) {
                                 showPermissionDialog = false
                             }
                         },

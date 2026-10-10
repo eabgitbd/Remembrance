@@ -3,10 +3,13 @@ package com.codetoday.remembrance.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -24,6 +27,8 @@ import com.codetoday.remembrance.data.model.OverlayPosition
 import com.codetoday.remembrance.data.model.ReminderItem
 import com.codetoday.remembrance.data.model.SupportedLanguage
 import com.codetoday.remembrance.domain.typography.FontCatalog
+import com.codetoday.remembrance.ui.MainActivity
+import java.util.concurrent.atomic.AtomicInteger
 
 class OverlayWindowManager(private val context: Context) {
 
@@ -36,19 +41,24 @@ class OverlayWindowManager(private val context: Context) {
     private var safetyWatchdogRunnable: Runnable? = null
     var onDismissCallback: (() -> Unit)? = null
 
+    private val notificationCycleCounter = AtomicInteger(0)
+
     init {
         createHeadsUpNotificationChannel()
     }
 
     private fun createHeadsUpNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             val channel = NotificationChannel(
                 HEADS_UP_CHANNEL_ID,
                 "Remembrance Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Shows heads-up alert when a remembrance triggers"
-                enableVibration(false)
+                description = "Shows floating heads-up alert when a remembrance triggers"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 150)
+                setSound(defaultSoundUri, null)
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
@@ -60,7 +70,7 @@ class OverlayWindowManager(private val context: Context) {
         mainHandler.post {
             dismissCurrentOverlay()
 
-            // Post a high-priority notification to guarantee system heads-up over other apps
+            // Post guaranteed system heads-up notification banner
             postHeadsUpNotification(reminder)
 
             if (!Settings.canDrawOverlays(context)) {
@@ -107,6 +117,7 @@ class OverlayWindowManager(private val context: Context) {
                     safelyRemoveOverlayView(overlayView, onComplete)
                 }
             } catch (e: Exception) {
+                // Catches OEM pop-up restrictions (MIUI, ColorOS) gracefully
                 e.printStackTrace()
                 safelyRemoveOverlayView(overlayView, onComplete)
             }
@@ -121,6 +132,18 @@ class OverlayWindowManager(private val context: Context) {
                 SupportedLanguage.ENGLISH -> "Remembrance"
             }
 
+            val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val contentPendingIntent = PendingIntent.getActivity(
+                context,
+                notificationCycleCounter.incrementAndGet(),
+                openAppIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
             val notification = NotificationCompat.Builder(context, HEADS_UP_CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(reminder.text)
@@ -129,13 +152,20 @@ class OverlayWindowManager(private val context: Context) {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setVibrate(longArrayOf(0, 150))
+                .setSound(soundUri)
+                .setOnlyAlertOnce(false)
                 .setAutoCancel(true)
+                .setContentIntent(contentPendingIntent)
+                .setFullScreenIntent(contentPendingIntent, false)
                 .setTimeoutAfter(reminder.durationSeconds * 1000L)
                 .build()
 
-            NotificationManagerCompat.from(context).notify(REMINDER_NOTIFICATION_ID, notification)
+            // Cycle through unique notification IDs to ensure SystemUI re-alerts every time
+            val notifId = REMINDER_NOTIFICATION_BASE_ID + (notificationCycleCounter.get() % 5)
+            NotificationManagerCompat.from(context).notify(notifId, notification)
         } catch (e: Exception) {
-            // Permission might be pending
+            e.printStackTrace()
         }
     }
 
@@ -256,9 +286,12 @@ class OverlayWindowManager(private val context: Context) {
         }
 
         // Essential flags for displaying reliably above other apps without tapjacking blocks
+        @Suppress("DEPRECATION")
         val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
 
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -312,6 +345,6 @@ class OverlayWindowManager(private val context: Context) {
 
     companion object {
         const val HEADS_UP_CHANNEL_ID = "remembrance_heads_up_channel"
-        const val REMINDER_NOTIFICATION_ID = 2002
+        const val REMINDER_NOTIFICATION_BASE_ID = 2000
     }
 }

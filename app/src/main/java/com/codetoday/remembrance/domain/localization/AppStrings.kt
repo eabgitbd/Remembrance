@@ -37,6 +37,9 @@ data class AppStrings(
     val overlayGranted: String,
     val settingsBtn: String,
     val permissionsDoneBtn: String,
+    val batteryOptimizationBtn: String,
+    val batteryGranted: String,
+    val oemGuidanceHint: String,
     val positionNames: Map<OverlayPosition, String>
 ) {
     companion object {
@@ -76,6 +79,9 @@ data class AppStrings(
                     overlayGranted = "✓ ডিসপ্লে অনুমতি সক্রিয় রয়েছে",
                     settingsBtn = "নোটিফিকেশন ও ব্যাটারি সেটিংস",
                     permissionsDoneBtn = "অনুমতি দেওয়া সম্পন্ন হয়েছে",
+                    batteryOptimizationBtn = "ব্যাটারি অপটিমাইজেশন ছাড় দিন (স্থায়ী ব্যাকগ্রাউন্ড)",
+                    batteryGranted = "✓ ব্যাটারি অপটিমাইজেশন মুক্ত (সক্রিয়)",
+                    oemGuidanceHint = "Xiaomi / Vivo / Oppo ব্যবহারকারী হলে: অ্যাপ পারমিশন থেকে 'Display pop-up windows in background' চালু করুন।",
                     positionNames = mapOf(
                         OverlayPosition.TOP to "শীর্ষে (উপরে)",
                         OverlayPosition.SEMI_TOP to "উর্ধ্বাংশ",
@@ -114,11 +120,14 @@ data class AppStrings(
                     facebookButton = "تابعنا على فيسبوك",
                     versionText = "الإصدار 1.0.0 • استهلاك منخفض جداً للبطارية والذاكرة",
                     permissionTitle = "الأذونات المطلوبة",
-                    permissionDesc = "لعرض الأذكار العائمة فوق التطبيقات الأخرى، يرجى تفعيل إذن الظهور فوق التطبيقات.",
+                    permissionDesc = "لعرض الأذكار العائمة فوق التطبيقات الأخرى، يرجى تفعيل إذن الظهور فوق التطبيقات وإعفاء البطارية.",
                     enableOverlayBtn = "تفعيل الظهور فوق التطبيقات",
                     overlayGranted = "✓ تم تفعيل إذن الظهور",
                     settingsBtn = "إعدادات الإشعارات والبطارية",
                     permissionsDoneBtn = "تم منح الأذونات",
+                    batteryOptimizationBtn = "إلغاء تحسين البطارية (للعمل بالخلفية)",
+                    batteryGranted = "✓ تم إلغاء قيود البطارية",
+                    oemGuidanceHint = "لهواتف شاومي وفيفو وأوبو: يرجى تفعيل 'عرض النوافذ المنبثقة بالخلفية' في إعدادات التطبيق.",
                     positionNames = mapOf(
                         OverlayPosition.TOP to "أعلى الشاشة",
                         OverlayPosition.SEMI_TOP to "أعلى الوسط",
@@ -162,6 +171,9 @@ data class AppStrings(
                     overlayGranted = "✓ Display Over Apps (Granted)",
                     settingsBtn = "Notification & Battery Settings",
                     permissionsDoneBtn = "I've Enabled Permissions",
+                    batteryOptimizationBtn = "Ignore Battery Optimizations",
+                    batteryGranted = "✓ Battery Optimization Ignored",
+                    oemGuidanceHint = "For Xiaomi / Vivo / Oppo: Enable 'Display pop-up windows in background' under App Permissions.",
                     positionNames = mapOf(
                         OverlayPosition.TOP to "Top",
                         OverlayPosition.SEMI_TOP to "Semi Top",

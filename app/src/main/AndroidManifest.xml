@@ -24,6 +24,7 @@
     <!-- Exact alarms for precision intervals when other apps are active -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".RemembranceApp"
@@ -55,6 +56,12 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Periodically displays spiritual and motivational reminders overlay on screen based on user configured non-overlapping intervals." />
         </service>
+
+        <!-- Hardware RTC alarm receiver for guaranteed background wakeups -->
+        <receiver
+            android:name=".service.ReminderAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <!-- Device reboot auto-start receiver -->
         <receiver

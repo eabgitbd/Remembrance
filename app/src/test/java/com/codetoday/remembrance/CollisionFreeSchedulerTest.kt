@@ -80,4 +80,29 @@ class CollisionFreeSchedulerTest {
         assertNotNull(english.startService)
         assertNotNull(arabic.startService)
     }
+
+    @Test
+    fun testSchedulerRequestsAlarmOnStart() = testScope.runTest {
+        val scheduler = CollisionFreeScheduler(scope = this, bufferBetweenRemindersMs = 1000L)
+        var alarmTriggerTime = 0L
+        var alarmReminderId = 0L
+        scheduler.onScheduleAlarmRequested = { time, id ->
+            alarmTriggerTime = time
+            alarmReminderId = id
+        }
+
+        val reminderA = ReminderItem(
+            id = 10,
+            text = "Test Alarm",
+            durationSeconds = 2,
+            frequencyMinutes = 1
+        )
+
+        scheduler.start(listOf(reminderA))
+
+        assertTrue(alarmTriggerTime > 0L)
+        assertEquals(10L, alarmReminderId)
+
+        scheduler.stop()
+    }
 }
